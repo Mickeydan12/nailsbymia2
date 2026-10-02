@@ -1,3 +1,4 @@
+console.log('ENV KEYS:', Object.keys(process.env).filter(k => /mongo|db|uri|jwt/i.test(k)));
 import 'dotenv/config';import express from 'express';import cors from 'cors';import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';import mongoose from 'mongoose';import routes from './routes/index.js';
 const app=express();
