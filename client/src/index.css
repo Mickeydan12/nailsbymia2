@@ -1,0 +1,6 @@
+@import "tailwindcss";
+@theme{--color-cream:#FFF9F5;--color-blush:#DFA6B8;--color-rose:#A85D75;--color-ink:#241F21;--color-mute:#71696B;--color-line:#E9DFE0;--font-serif:"Playfair Display",serif;--font-sans:Inter,system-ui,sans-serif}
+body{background:#FFF9F5;color:#241F21;font-family:var(--font-sans)}
+h1,h2,h3{font-family:var(--font-serif)}
+:focus-visible{outline:2px solid #A85D75;outline-offset:2px}
+html{scroll-behavior:smooth}

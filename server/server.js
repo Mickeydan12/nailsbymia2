@@ -1,0 +1,13 @@
+import 'dotenv/config';import express from 'express';import cors from 'cors';import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';import mongoose from 'mongoose';import routes from './routes/index.js';
+const app=express();
+app.use(helmet({crossOriginResourcePolicy:{policy:'cross-origin'}}));
+app.use(cors({origin:process.env.CLIENT_URL||'http://localhost:5173'}));
+app.use(express.json({limit:'100kb'}));
+app.use('/api',rateLimit({windowMs:15*60*1000,limit:300}));
+app.use('/uploads',express.static('uploads'));
+app.use('/api',routes);
+app.use('/api',(q,r)=>r.status(404).json({success:false,message:'Route not found'}));
+app.use((err,q,r,n)=>{if(!err.status)console.error(err);r.status(err.status||500).json({success:false,message:err.status?err.message:'Something went wrong'})});
+await mongoose.connect(process.env.MONGODB_URI);
+app.listen(process.env.PORT||5000,()=>console.log('API running'));

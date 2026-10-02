@@ -1,0 +1,50 @@
+import{Router}from'express';import bcrypt from'bcryptjs';import jwt from'jsonwebtoken';import multer from'multer';import crypto from'crypto';
+import*as M from'../models/index.js';import{admin,soft}from'../middleware/auth.js';
+const r=Router(),wrap=f=>(q,s,n)=>f(q,s,n).catch(n),ok=(s,data,c=200)=>s.status(c).json({success:true,data});
+const bad=(m,status=400)=>Object.assign(new Error(m),{status});
+r.post('/auth/login',wrap(async(q,s)=>{const u=await M.User.findOne({email:String(q.body.email||'').toLowerCase()}).select('+password');
+ if(!u||!await bcrypt.compare(String(q.body.password||''),u.password))throw bad('Invalid email or password',401);
+ ok(s,{token:jwt.sign({id:u._id,role:u.role},process.env.JWT_SECRET,{expiresIn:'8h'}),user:{name:u.name,email:u.email}})}));
+r.get('/auth/me',admin,wrap(async(q,s)=>ok(s,await M.User.findById(q.admin.id))));
+r.post('/auth/logout',(q,s)=>ok(s,{}));
+const crud=(base,Model,pub={})=>{
+ r.get(base,soft,wrap(async(q,s)=>ok(s,await Model.find(q.admin?{}:pub).sort({createdAt:-1}))));
+ r.get(base+'/:id',soft,wrap(async(q,s)=>{const d=await Model.findById(q.params.id).catch(()=>null);if(!d||(!q.admin&&pub.active&&!d.active))throw bad('Not found',404);ok(s,d)}));
+ r.post(base,admin,wrap(async(q,s)=>ok(s,await Model.create(q.body),201)));
+ r.put(base+'/:id',admin,wrap(async(q,s)=>ok(s,await Model.findByIdAndUpdate(q.params.id,q.body,{new:true,runValidators:true}))));
+ r.delete(base+'/:id',admin,wrap(async(q,s)=>{await Model.findByIdAndDelete(q.params.id);ok(s,{})}));};
+crud('/services',M.Service,{active:true});crud('/gallery',M.Gallery);crud('/testimonials',M.Testimonial,{approved:true});
+r.get('/settings',wrap(async(q,s)=>ok(s,await M.Settings.findOne())));
+r.put('/settings',admin,wrap(async(q,s)=>ok(s,await M.Settings.findOneAndUpdate({},q.body,{new:true,upsert:true}))));
+r.post('/contact',wrap(async(q,s)=>{const{name,email,message}=q.body;
+ if(!name?.trim())throw bad('Name is required.');if(!/^\S+@\S+\.\S+$/.test(email||''))throw bad('A valid email is required.');if(!message?.trim())throw bad('Message is required.');
+ await M.ContactMessage.create({name,email,phone:q.body.phone,subject:q.body.subject,message});ok(s,{},201)}));
+r.get('/contact',admin,wrap(async(q,s)=>ok(s,await M.ContactMessage.find().sort({createdAt:-1}))));
+r.put('/contact/:id',admin,wrap(async(q,s)=>ok(s,await M.ContactMessage.findByIdAndUpdate(q.params.id,{status:q.body.status},{new:true,runValidators:true}))));
+r.delete('/contact/:id',admin,wrap(async(q,s)=>{await M.ContactMessage.findByIdAndDelete(q.params.id);ok(s,{})}));
+const SLOTS=['9:00 AM','10:30 AM','12:00 PM','1:30 PM','3:00 PM','4:30 PM','6:00 PM'];
+const HOURS={1:[9,18],2:[9,18],3:[9,18],4:[9,18],5:[9,19],6:[10,19]};
+const mins=t=>{const[m,p]=t.split(' ');let[h,mm]=m.split(':').map(Number);if(p==='PM'&&h!==12)h+=12;if(p==='AM'&&h===12)h=0;return h*60+mm};
+const todayLagos=()=>new Date().toLocaleDateString('en-CA',{timeZone:'Africa/Lagos'});
+function dayCheck(date){if(!/^\d{4}-\d{2}-\d{2}$/.test(date||'')||isNaN(new Date(date)))throw bad('Choose a valid date.');
+ if(date<todayLagos())throw bad('Past dates cannot be booked.');
+ const h=HOURS[new Date(date+'T12:00:00Z').getUTCDay()];if(!h)throw bad('We are closed on Sundays.');return h}
+const open=(h,t)=>mins(t)>=h[0]*60&&mins(t)<h[1]*60;
+r.get('/appointments/availability',wrap(async(q,s)=>{const h=dayCheck(q.query.date);
+ const taken=(await M.Appointment.find({date:q.query.date,status:{$in:['pending','confirmed']}})).map(a=>a.time);
+ ok(s,SLOTS.filter(t=>open(h,t)).map(t=>({time:t,available:!taken.includes(t)})))}));
+const up=multer({dest:'uploads/',limits:{fileSize:3*1024*1024},fileFilter:(q,f,cb)=>cb(['image/jpeg','image/png','image/webp'].includes(f.mimetype)?null:bad('Only JPG, PNG or WEBP images are allowed.'),true)});
+r.post('/appointments',up.single('referenceImage'),wrap(async(q,s)=>{const b=q.body;
+ if(!b.customerName?.trim())throw bad('Full name is required.');if(!/^\+?[\d\s-]{7,15}$/.test(b.phone||''))throw bad('A valid phone number is required.');
+ if(b.email&&!/^\S+@\S+\.\S+$/.test(b.email))throw bad('Email is not valid.');
+ const svc=await M.Service.findOne({_id:b.serviceId,active:true}).catch(()=>null);if(!svc)throw bad('Service not found.');
+ const h=dayCheck(b.date);if(!SLOTS.includes(b.time)||!open(h,b.time))throw bad('Invalid time slot.');
+ try{const a=await M.Appointment.create({bookingId:'NBM-'+crypto.randomInt(10000,99999),customerName:b.customerName.trim(),phone:b.phone,email:b.email,notes:b.notes,
+  service:svc.name,serviceId:svc._id,date:b.date,time:b.time,price:svc.price,duration:svc.duration,referenceImage:q.file?'/uploads/'+q.file.filename:undefined});ok(s,a,201)}
+ catch(e){if(e.code===11000)throw bad('This time slot has just been booked. Please choose another time.',409);throw e}}));
+r.get('/appointments',admin,wrap(async(q,s)=>ok(s,await M.Appointment.find().sort({createdAt:-1}))));
+r.get('/appointments/:id',admin,wrap(async(q,s)=>ok(s,await M.Appointment.findById(q.params.id))));
+r.put('/appointments/:id',admin,wrap(async(q,s)=>{if(!['pending','confirmed','completed','cancelled'].includes(q.body.status))throw bad('Invalid status.');
+ ok(s,await M.Appointment.findByIdAndUpdate(q.params.id,{status:q.body.status},{new:true}))}));
+r.delete('/appointments/:id',admin,wrap(async(q,s)=>{await M.Appointment.findByIdAndDelete(q.params.id);ok(s,{})}));
+export default r;

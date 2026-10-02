@@ -1,0 +1,24 @@
+import{Link}from'react-router-dom';import{useApi,useSeo}from'../hooks.js';import{Primary,Ghost}from'../App.jsx';import{ServiceCard,Skel,Err,Img,Stat}from'../ui.jsx';import{GalleryBlock}from'./Gallery.jsx';
+const faq=[['Do I need to book in advance?','Yes. Appointments are recommended so we can reserve your preferred time.'],['How long does an appointment take?','Most appointments take between 60 and 120 minutes depending on the service.'],['Can I bring a reference design?','Yes. You can upload a reference image when booking.'],['Where are you located?','NailsByMia is based in Ikeja, Lagos.']];
+export default function Home(){const sv=useApi('/services'),t=useApi('/testimonials');useSeo('NailsByMia | Nail Technician in Ikeja, Lagos','Book beautiful custom nail sets with NailsByMia in Ikeja, Lagos. Explore our nail services, gallery and appointment options.');
+ return<>
+ <section className="mx-auto grid max-w-6xl items-center gap-10 px-5 py-14 md:grid-cols-2 md:py-24">
+  <div><p className="text-xs tracking-[.3em] text-rose">YOUR STYLE. YOUR NAILS. YOUR MOMENT.</p>
+   <h1 className="mt-4 text-5xl leading-tight sm:text-6xl">Beautiful nails, made for you.</h1>
+   <p className="mt-5 max-w-md text-mute">Custom nail sets designed around your style, mood and special moments.</p>
+   <div className="mt-8 flex flex-wrap gap-3"><Link to="/book" className={Primary}>Book an Appointment</Link><Link to="/services" className={Ghost}>Explore Designs</Link></div>
+   <p className="mt-8 text-sm text-mute">500+ happy clients · 4.9/5 average rating · 3+ years of experience</p></div>
+  <Img src="https://picsum.photos/seed/nbmhero/800/900" alt="Custom nail set by NailsByMia" className="aspect-[4/5] w-full rounded-[2rem] object-cover"/></section>
+ <section className="mx-auto mb-20 grid max-w-4xl grid-cols-2 gap-6 px-5 md:grid-cols-4"><Stat to={500} suffix="+" label="Happy Clients"/><Stat to={4.9} dec={1} suffix="/5" label="Average Rating"/><Stat to={3} suffix="+" label="Years Experience"/><Stat to={100} suffix="%" label="Personalized Service"/></section>
+ <section className="mx-auto max-w-6xl px-5"><h2 className="text-3xl sm:text-4xl">Services made for you</h2><p className="mb-8 mt-2 text-mute">From clean classics to custom nail art, choose a set that fits your vibe.</p>
+  {sv.loading?<Skel/>:sv.error?<Err msg="We couldn't load our services right now. Please refresh and try again." retry={sv.reload}/>:
+  <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">{sv.data.filter(s=>s.featured).slice(0,4).map(s=><ServiceCard key={s._id} s={s}/>)}</div>}
+  <div className="mt-8 text-center"><Link to="/services" className={Ghost}>View All Services</Link></div></section>
+ <section className="mx-auto mt-24 max-w-6xl px-5"><h2 className="text-3xl sm:text-4xl">A little inspiration</h2><p className="mb-6 mt-2 text-mute">Your next set might be hiding here.</p><GalleryBlock limit={6}/><div className="mt-8 text-center"><Link to="/gallery" className={Ghost}>View Full Gallery</Link></div></section>
+ <section className="mx-auto mt-24 max-w-3xl px-5 text-center"><h2 className="text-3xl sm:text-4xl">Meet Mia</h2><p className="mt-3 text-mute">Hi, I'm Mia, the nail artist behind NailsByMia. I love creating clean, detailed and beautiful nail sets that help my clients feel confident and express their personal style.</p><Link to="/about" className={Ghost+' mt-6'}>More About Mia</Link></section>
+ <section className="mx-auto mt-24 max-w-6xl px-5"><h2 className="text-3xl sm:text-4xl">Loved by our clients</h2>
+  <div className="mt-8 grid gap-5 md:grid-cols-3">{t.loading?<Skel n={3}/>:t.error?<Err msg="Reviews couldn't be loaded." retry={t.reload}/>:t.data.length===0?<p className="text-mute">No testimonials have been added yet.</p>:
+  t.data.slice(0,3).map(x=><figure key={x._id} className="rounded-2xl border border-line bg-white p-6"><p className="text-rose" aria-label={`${x.rating} out of 5 stars`}>{'★'.repeat(x.rating)}</p><blockquote className="mt-3 text-sm">“{x.review}”</blockquote><figcaption className="mt-4 text-sm font-semibold">{x.customerName}</figcaption></figure>)}</div></section>
+ <section className="mx-auto mt-24 max-w-3xl px-5"><h2 className="text-3xl sm:text-4xl">Questions</h2>
+  <div className="mt-6 divide-y divide-line rounded-2xl border border-line bg-white">{faq.map(([q,a])=><details key={q} className="group p-5"><summary className="cursor-pointer font-medium">{q}</summary><p className="mt-2 text-sm text-mute">{a}</p></details>)}</div></section>
+ <section className="mx-auto mt-24 max-w-6xl rounded-[2rem] bg-blush/30 px-5 py-16 text-center"><h2 className="text-3xl sm:text-4xl">Ready for your next set?</h2><p className="mt-2 text-mute">Pick your style, choose your time and let Mia handle the rest.</p><Link to="/book" className={Primary+' mt-6'}>Book Appointment</Link></section></>}

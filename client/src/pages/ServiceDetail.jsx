@@ -1,0 +1,10 @@
+import{useParams,Link}from'react-router-dom';import{useApi,useSeo}from'../hooks.js';import{naira}from'../api.js';import{Primary,Ghost}from'../App.jsx';import{Err,Img,Skel}from'../ui.jsx';
+const inc={Gel:['Nail prep and cuticle care','Shaping','Gel colour and glossy top coat','Cuticle oil finish'],Acrylic:['Nail prep and cuticle care','Full acrylic application','Your choice of shape and length','Colour and finish'],Extensions:['Nail prep','Gel extension application','Shaping to your preferred length','Colour and top coat'],'Nail Art':['Consultation on your design','Base colour','Detailed design work','Sealing top coat'],Removal:['Safe soak-off','Gentle buffing','Nail and cuticle care']};
+export default function ServiceDetail(){const{id}=useParams(),{data:s,loading,error,reload}=useApi('/services/'+id);useSeo(s?`${s.name} | NailsByMia`:'Service | NailsByMia',s?.description||'NailsByMia service details');
+ if(loading)return<div className="mx-auto max-w-4xl px-5 py-14"><Skel n={2}/></div>;
+ if(error)return<div className="mx-auto max-w-xl px-5 py-14"><Err msg="We couldn't find that service." retry={reload}/><Link to="/services" className={Ghost+' mt-4'}>All services</Link></div>;
+ return<section className="mx-auto grid max-w-5xl gap-10 px-5 py-14 md:grid-cols-2"><Img src={s.image} alt={`${s.name} nail set`} className="aspect-square w-full rounded-[2rem] object-cover"/>
+ <div><p className="text-xs tracking-[.3em] text-rose">{s.category?.toUpperCase()}</p><h1 className="mt-2 text-4xl">{s.name}</h1><p className="mt-3 text-mute">{s.description}</p>
+ <p className="mt-4"><b className="text-xl text-rose">{s.priceLabel||naira(s.price)}</b> · {s.duration} minutes</p>
+ <h2 className="mt-6 text-xl">What's included</h2><ul className="mt-2 list-disc pl-5 text-sm text-mute">{(inc[s.category]||[]).map(x=><li key={x}>{x}</li>)}</ul>
+ <div className="mt-8 flex gap-3"><Link to={`/book?service=${s._id}`} className={Primary}>Book This Service</Link><Link to="/services" className={Ghost}>Back</Link></div></div></section>}

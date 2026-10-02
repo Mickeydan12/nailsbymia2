@@ -1,0 +1,10 @@
+import mongoose from 'mongoose';const{Schema,model}=mongoose;const T={timestamps:true};
+export const User=model('User',new Schema({name:String,email:{type:String,unique:true,lowercase:true},password:{type:String,select:false},role:{type:String,default:'admin'}},T));
+export const Service=model('Service',new Schema({name:{type:String,required:true},description:String,price:{type:Number,required:true},priceLabel:String,duration:{type:Number,required:true},category:{type:String,enum:['Gel','Acrylic','Extensions','Nail Art','Removal']},image:String,active:{type:Boolean,default:true},featured:Boolean},T));
+const ap=new Schema({bookingId:{type:String,unique:true},customerName:{type:String,required:true},phone:{type:String,required:true},email:String,service:String,serviceId:{type:Schema.Types.ObjectId,ref:'Service'},date:{type:String,required:true},time:{type:String,required:true},notes:String,referenceImage:String,price:Number,duration:Number,status:{type:String,enum:['pending','confirmed','completed','cancelled'],default:'pending'}},T);
+ap.index({date:1,time:1},{unique:true,partialFilterExpression:{status:{$in:['pending','confirmed']}}});
+export const Appointment=model('Appointment',ap);
+export const Gallery=model('Gallery',new Schema({title:String,category:{type:String,enum:['French','Chrome','Acrylic','Simple','Custom']},image:String,description:String},T));
+export const Testimonial=model('Testimonial',new Schema({customerName:String,review:String,rating:{type:Number,min:1,max:5,default:5},avatar:String,approved:{type:Boolean,default:false}},T));
+export const ContactMessage=model('ContactMessage',new Schema({name:{type:String,required:true},email:{type:String,required:true},phone:String,subject:String,message:{type:String,required:true},status:{type:String,enum:['new','read','replied'],default:'new'}},T));
+export const Settings=model('Settings',new Schema({businessName:String,tagline:String,phone:String,email:String,whatsapp:String,instagram:String,tiktok:String,location:String,hours:Object},T));
